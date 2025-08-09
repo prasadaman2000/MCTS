@@ -69,5 +69,6 @@ class MCTSTrainer(Player):
                 for action, count in v['action_won'].items():
                     sapb.action_won[int(action)] = count
                 self.states[k] = sapb
+            print(f"Loaded state from {fname}")
         except:
             print(f"could not load file {fname}. starting fresh")
