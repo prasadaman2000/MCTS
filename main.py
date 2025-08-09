@@ -36,11 +36,11 @@ p2.load("player2.json")
 g = game.ConnectFour((6,7), p1, p2)
 
 for iter in range(100):
-    for _ in range(1000):
+    for i in range(1000):
         winner = g.play()
         p1.back_propogate(winner[0])
         p2.back_propogate(winner[0])
-        print(f"winner: {winner[0]}")
-
+        print(f"finished game {i}/1000", end='\r')
+    print(f"dumping to file: player*_ckpt{iter % 10}")
     p1.dump(f"player1_ckpt{iter % 10}.json")
     p2.dump(f"player2_ckpt{iter % 10}.json")
