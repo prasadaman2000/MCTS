@@ -72,21 +72,21 @@ class ConnectFour:
         self.dims = dims
         self.n = n
 
-    def play(self) -> tuple[int, GameState]:
+    def play(self, **kwargs) -> tuple[int, GameState]:
         board = np.zeros(self.dims, dtype=np.int16)
         cur_state = GameState(board, self.n)
 
         while True:
             valid = False
             while not valid:
-                p1_move = self.player1.get_move(cur_state)
+                p1_move = self.player1.get_move(cur_state, **kwargs)
                 cur_state, valid = cur_state.next_state(p1_move, 1)
             is_terminal, winner = cur_state.is_terminal()
             if is_terminal:
                 return winner, cur_state
             valid = False
             while not valid:
-                p2_move = self.player2.get_move(cur_state)
+                p2_move = self.player2.get_move(cur_state, **kwargs)
                 cur_state, valid = cur_state.next_state(p2_move, 2)
             is_terminal, winner = cur_state.is_terminal()
             if is_terminal:
