@@ -186,10 +186,10 @@ class DeepMCTSTrainer(MCTSTrainer):
         def forward(self, image):
             x = self.conv1(image)
             x = F.max_pool2d(torch.relu(x), (2,2)) 
-            F.dropout2d(x)
+            F.dropout2d(x, training=self.training)
             conv_result = self.flatten(x)
             x = self.fc1(conv_result)
-            x = F.dropout(x)
+            x = F.dropout(x, training=self.training)
             x = torch.relu(x)
             x = self.fc2(conv_result)
             return x
@@ -220,7 +220,7 @@ class DeepMCTSTrainer(MCTSTrainer):
             X_torch = X_torch.reshape((1,1,self.board_size[0],self.board_size[1])).to(self.device)
             self.model.train(False)
             win_probabilities = self.model(X_torch)[0]
-            print(win_probabilities)
+            # print(win_probabilities)
             valid_actions = init_state.get_valid_actions()
             max_prob_action = None
             max_prob = -1000
@@ -286,13 +286,11 @@ class DeepMCTSTrainer(MCTSTrainer):
         batch_size = 4
         num_epochs = 100
         all_losses = []
-        for epoch in range(num_epochs):
+        for _ in range(num_epochs):
             idx_start = 0
             epoch_loss = []
             step_count = 0
-            while True:
-                if idx_start > len(X_torch):
-                    break
+            while idx_start < len(X_torch):
                 idx_end = min(len(X_torch), idx_start + batch_size)
                 X_batch = X_torch[idx_start:idx_end]
                 self.optimizer.zero_grad()
