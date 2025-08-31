@@ -29,6 +29,9 @@ class StateActionProbabilities:
         self.action_seen = defaultdict(int)
         self.action_won = defaultdict(int)
 
+    def num_samples(self) -> int:
+        return np.sum([v for _,v in self.action_seen.items()])
+
     def sample_action(self) -> int:
         """Return highest win probability action.
         If no actions have won, pick a random action
@@ -194,7 +197,7 @@ class DeepMCTSTrainer(MCTSTrainer):
             x = self.fc2(conv_result)
             return x
 
-    def __init__(self, id, r=0.2, s=50, board_size=(6,7)):
+    def __init__(self, id, r=0.2, s=50, board_size=(7,6)):
         self.id = id
         self.board_size = board_size
         self.states = {}
@@ -220,7 +223,7 @@ class DeepMCTSTrainer(MCTSTrainer):
             X_torch = X_torch.reshape((1,1,self.board_size[0],self.board_size[1])).to(self.device)
             self.model.train(False)
             win_probabilities = self.model(X_torch)[0]
-            # print(win_probabilities)
+            print(win_probabilities)
             valid_actions = init_state.get_valid_actions()
             max_prob_action = None
             max_prob = -1000
@@ -245,6 +248,7 @@ class DeepMCTSTrainer(MCTSTrainer):
                 else:
                     move = random.sample(cur_state.get_valid_actions(), 1)[0]
                 if my_move:
+                    self.states_to_train.add(board_str)
                     self.cur_states_and_actions.append((board_str, move))
                     cur_state, _ = cur_state.next_state(move, self.id)
                 else:
@@ -254,7 +258,6 @@ class DeepMCTSTrainer(MCTSTrainer):
             self.back_propogate(winner)
         
         board_str = str(init_state.board)
-        self.states_to_train.add(board_str)
         move = self.states[board_str].sample_action()
         rand = random.random()
         end = time.time()
@@ -267,6 +270,8 @@ class DeepMCTSTrainer(MCTSTrainer):
         X_s = []
         y_s = []
         for board_str in self.states_to_train:
+            if self.states[board_str].num_samples() < 10:
+                continue
             y_s.append(self.states[board_str].probabilities_as_np(self.board_size[0]))
             state_arr = np.fromstring(board_str.replace("\n", "").replace("[", "").replace("]", ""), sep=' ')
             X_s.append(state_arr)
@@ -283,10 +288,10 @@ class DeepMCTSTrainer(MCTSTrainer):
         self.model.train(True)
 
         loss = nn.MSELoss()
-        batch_size = 4
+        batch_size = 128
         num_epochs = 100
         all_losses = []
-        for _ in range(num_epochs):
+        for epoch in range(num_epochs):
             idx_start = 0
             epoch_loss = []
             step_count = 0
@@ -302,9 +307,9 @@ class DeepMCTSTrainer(MCTSTrainer):
                     epoch_loss.append(l.item())
                 step_count += 1
                 idx_start += batch_size
-            # print(f"finished epoch {epoch + 1} with average loss {np.mean(epoch_loss)}")
+            print(f"finished epoch {epoch + 1} with average loss {np.mean(epoch_loss)}", end = "\r")
             all_losses.append(np.mean(epoch_loss))
-        print(f"finished training model for player{self.id} with final loss {all_losses[-1]}")
+        print(f"\nfinished training model for player{self.id} with final loss {all_losses[-1]}")
         self.states_to_train.clear()
 
     def dump(self, fname):

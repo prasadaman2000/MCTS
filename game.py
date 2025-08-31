@@ -46,7 +46,7 @@ class GameState:
         directions = [(1,0), (0,1), (1, -1), (1, 1)]
         has_zero = False
         for col in range(self.cols):
-            for row in range(self.cols):
+            for row in range(self.rows):
                 if self.board[col][row] == 0:
                     has_zero = True
                     continue

@@ -5,6 +5,7 @@ import argparse
 import time
 
 NUM_EVALS = 100
+BOARD_SIZE = (7,6)
 
 parser = argparse.ArgumentParser(description="MCTS trainer for connect 4")
 parser.add_argument("--if1", help="Input file for p1")
@@ -15,17 +16,17 @@ parser.add_argument("--num_steps_per_checkpoint", type=int, default=1000, help="
 args = parser.parse_args()
 
 
-p1 = player.DeepMCTSTrainer(1, r=0.1, s=250)
-p2 = player.DeepMCTSTrainer(2, r=0.1, s=250)
+p1 = player.DeepMCTSTrainer(1, r=0.1, s=50)
+p2 = player.DeepMCTSTrainer(2, r=0.1, s=50)
 p1.load(args.if1)
 p2.load(args.if2)
 
 r_player = player.RandomPlayer()
 
-g = game.ConnectFour((6,7), p1, p2)
+g = game.ConnectFour(BOARD_SIZE, p1, p2)
 
-g_1 = game.ConnectFour((6,7), p1, r_player)
-g_2 = game.ConnectFour((6,7), r_player, p2)
+g_1 = game.ConnectFour(BOARD_SIZE, p1, r_player)
+g_2 = game.ConnectFour(BOARD_SIZE, r_player, p2)
 
 for iter in range(args.num_checkpoints):
     print(f"starting checkpoint {iter + 1}/{args.num_checkpoints}")
