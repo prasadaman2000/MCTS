@@ -157,4 +157,4 @@ def start():
     return session_id
     
 
-bottle.run(host="localhost", port=8080, debug=True, reloader=True)
+bottle.run(host="0.0.0.0", port=8080, debug=True, reloader=True)
