@@ -1,5 +1,6 @@
 import game
 import player
+import mcts_players
 import numpy as np
 import argparse
 import time
@@ -15,8 +16,8 @@ parser.add_argument("--num_steps_per_checkpoint", type=int, default=1000, help="
 args = parser.parse_args()
 
 
-p1 = player.DeepMCTSTrainer(1, r=0.1, s=250)
-p2 = player.DeepMCTSTrainer(2, r=0.1, s=250)
+p1 = mcts_players.DeepMCTSTrainer(1, r=0.1, s=250)
+p2 = mcts_players.DeepMCTSTrainer(2, r=0.1, s=250)
 p1.load(args.if1)
 p2.load(args.if2)
 

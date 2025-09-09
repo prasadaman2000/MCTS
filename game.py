@@ -1,4 +1,3 @@
-import random
 import numpy as np
 import player
 
@@ -46,7 +45,7 @@ class GameState:
         directions = [(1,0), (0,1), (1, -1), (1, 1)]
         has_zero = False
         for col in range(self.cols):
-            for row in range(self.cols):
+            for row in range(self.rows):
                 if self.board[col][row] == 0:
                     has_zero = True
                     continue
@@ -64,30 +63,48 @@ class GameState:
     def print_state(self):
         print("#####")
         print(self.board.T)
-    
+
 class ConnectFour:
     def __init__(self, dims: tuple[int, int], player1: player.Player, player2: player.Player, n: int = 4):
         self.player1 = player1
         self.player2 = player2
         self.dims = dims
         self.n = n
+        self.cur_state = None
+        self.winner = None
+        self.player_turn = None
+    
+    def get_cur_state(self):
+        return self.cur_state
+
+    def get_winner(self):
+        return self.winner
+    
+    def get_player_turn(self):
+        return self.player_turn
 
     def play(self, **kwargs) -> tuple[int, GameState]:
+        print("Starting game.")
+
         board = np.zeros(self.dims, dtype=np.int16)
-        cur_state = GameState(board, self.n)
+        self.cur_state = GameState(board, self.n)
 
         while True:
             valid = False
+            self.player_turn = 1
             while not valid:
-                p1_move = self.player1.get_move(cur_state, **kwargs)
-                cur_state, valid = cur_state.next_state(p1_move, 1)
-            is_terminal, winner = cur_state.is_terminal()
+                p1_move = self.player1.get_move(self.cur_state, **kwargs)
+                self.cur_state, valid = self.cur_state.next_state(p1_move, 1)
+            is_terminal, winner = self.cur_state.is_terminal()
             if is_terminal:
-                return winner, cur_state
+                self.winner = winner
+                return winner, self.cur_state
             valid = False
+            self.player_turn = 2
             while not valid:
-                p2_move = self.player2.get_move(cur_state, **kwargs)
-                cur_state, valid = cur_state.next_state(p2_move, 2)
-            is_terminal, winner = cur_state.is_terminal()
+                p2_move = self.player2.get_move(self.cur_state, **kwargs)
+                self.cur_state, valid = self.cur_state.next_state(p2_move, 2)
+            is_terminal, winner = self.cur_state.is_terminal()
             if is_terminal:
-                return winner, cur_state
+                self.winner = winner
+                return winner, self.cur_state
