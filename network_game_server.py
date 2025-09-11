@@ -15,7 +15,7 @@ endpoints:
 """
 
 import bottle
-from bottle import route, request, response
+from bottle import route, request, response, static_file
 import uuid
 import game
 import player
@@ -81,7 +81,7 @@ class NetworkPlayer(player.Player):
 @route("/")
 def hello():
     response.headers['Access-Control-Allow-Origin'] = '*'
-    return "hi" 
+    return static_file("index.html", root=".")
 
 @route("/getactions")
 def get_actions():
@@ -168,4 +168,4 @@ def start():
     return session_id
     
 
-bottle.run(host="0.0.0.0", port=8080, debug=True, reloader=True)
+bottle.run(host="0.0.0.0", port=80, debug=True, reloader=True)

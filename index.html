@@ -12,7 +12,7 @@
         var sessionId = null;
 
         async function getGameState() {
-            var response = await fetch("http://127.0.0.1:8080/getstate?session=" + sessionId);
+            var response = await fetch("http://127.0.0.1:80/getstate?session=" + sessionId);
             var stateJson = await response.json();
             return stateJson;
         }
@@ -89,7 +89,7 @@
                 alert("choose a player");
                 return;
             }
-            var response = await fetch("http://127.0.0.1:8080/start?id=" + playerId);
+            var response = await fetch("http://127.0.0.1:80/start?id=" + playerId);
             sessionId = await response.text();
             console.log(sessionId);
             document.getElementById("title").innerText = "You are player " + playerId;
@@ -119,7 +119,7 @@
                 alert("pick a move")
                 return;
             }
-            var response = await fetch("http://127.0.0.1:8080/playaction?session=" + sessionId + "&action=" + chosenMove);
+            var response = await fetch("http://127.0.0.1:80/playaction?session=" + sessionId + "&action=" + chosenMove);
             var stateJson = await response.json();
             if (stateJson["success"]) {
                 document.getElementById("moveInput").setAttribute("hidden", "");
@@ -141,7 +141,7 @@
         }
 
         async function setup_player_input() {
-            var response = await fetch("http://127.0.0.1:8080/getactions?session=" + sessionId);
+            var response = await fetch("http://127.0.0.1:80/getactions?session=" + sessionId);
             var stateJson = await response.json();
             console.log('steup_player-input');
             console.log(stateJson);
