@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Connect 4</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <script type="application/javascript">
+        var playerId = null;
+        var sessionId = null;
+
+        async function getGameState() {
+            var response = await fetch("http://127.0.0.1:8080/getstate?session=" + sessionId);
+            var stateJson = await response.json();
+            return stateJson;
+        }
+
+        function transpose(arr) {
+            new_arr = []
+            for (var j = arr[0].length - 1; j >= 0; --j) {
+                row = []
+                for (var i = 0; i < arr.length; ++i) {
+                    row.push(arr[i][j]);
+                }
+                new_arr.push(row)
+            }
+            console.log(new_arr)
+            return new_arr
+        }
+
+        function board_to_array(board_str) {
+            board_str = board_str.replace(/[\[|\]]/g, "");
+            board_str = board_str.replace(/\n /g, "\n");
+            board_str_split = board_str.split("\n")
+            rows = [];
+            for (var row in board_str_split) {
+                rows.push(board_str_split[row].split(" "));
+            }
+            return transpose(rows);
+        }
+
+        function draw_board(board_arr) {
+            var parent_div = document.getElementById("gameboard");
+            while (parent_div.firstChild) {
+                parent_div.removeChild(parent_div.firstChild);
+            }
+
+            var label_row = document.createElement("div");
+            label_row.classList.add("row");
+
+            for (var i = 0; i < board_arr[0].length; ++i) {
+                var row_item = document.createElement("div");
+                row_item.classList.add("col-1", "square-grid-item");
+                var row_p = document.createElement("p");
+                row_p.innerText = i;
+                row_item.appendChild(row_p);
+                label_row.append(row_item);
+            }
+
+            parent_div.appendChild(label_row);
+
+            for (var row = 0; row < board_arr.length; ++row) {
+                var row_div = document.createElement("div");
+                row_div.classList.add("row");
+                for (var col = 0; col < board_arr[row].length; ++col) {
+                    var row_item = document.createElement("div");
+                    row_item.classList.add("col-1", "square-grid-item");
+                    var row_p = document.createElement("p");
+                    row_item.appendChild(row_p);
+                    row_div.appendChild(row_item);
+                    if (board_arr[row][col] == 1) {
+                        row_item.classList.add("bg-warning");
+                    } else if (board_arr[row][col] == 2) {
+                        row_item.classList.add("bg-danger");
+                    }
+                }
+                parent_div.appendChild(row_div);
+            }
+        }
+
+        async function start_game() {
+            console.log("starting game.");
+            try {
+                playerId = document.querySelector('input[name="player"]:checked').value;
+            } catch (error) {
+                console.log(error);
+                alert("choose a player");
+                return;
+            }
+            var response = await fetch("http://127.0.0.1:8080/start?id=" + playerId);
+            sessionId = await response.text();
+            console.log(sessionId);
+            document.getElementById("title").innerText = "You are player " + playerId;
+            document.getElementById("gameboard").removeAttribute("hidden");
+            document.getElementById("playerSelect").setAttribute("hidden", "");
+
+            var stateJson = await getGameState();
+            draw_board(board_to_array(stateJson["board"]))
+
+            if (playerId == 1) {
+                setup_player_input();
+            } else {
+                wait_for_other();
+            }
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        async function handle_user_input() {
+            console.log("handling user input");
+            try {
+                var chosenMove = document.querySelector('input[name="move"]:checked').value;
+            } catch (error) {
+                console.log(error);
+                alert("pick a move")
+                return;
+            }
+            var response = await fetch("http://127.0.0.1:8080/playaction?session=" + sessionId + "&action=" + chosenMove);
+            var stateJson = await response.json();
+            if (stateJson["success"]) {
+                document.getElementById("moveInput").setAttribute("hidden", "");
+                stateJson = await getGameState();
+                draw_board(board_to_array(stateJson["board"]));
+                if (stateJson["winner"] != "-1") {
+                    if (stateJson["winner"] != playerId) {
+                        document.getElementById("title").innerText = "You lost.";
+                    } else {
+                        document.getElementById("title").innerText = "You won.";
+                    }
+                    return;
+                } else {
+                    wait_for_other();
+                }
+            } else {
+                alert("action select failed, try again.")
+            }
+        }
+
+        async function setup_player_input() {
+            var response = await fetch("http://127.0.0.1:8080/getactions?session=" + sessionId);
+            var stateJson = await response.json();
+            console.log('steup_player-input');
+            console.log(stateJson);
+
+            document.getElementById("moveInput").removeAttribute("hidden");
+
+            var rowForButtons = document.getElementById("moveSelect");
+
+            while (rowForButtons.firstChild) {
+                rowForButtons.removeChild(rowForButtons.firstChild);
+            }
+
+            for (var action_idx = 0; action_idx < stateJson["actions"].length; ++action_idx) {
+                var buttonDiv = document.createElement("div");
+                buttonDiv.classList.add("col-1");
+
+                var label = document.createElement('label');
+                var radio = document.createElement("input");
+                radio.setAttribute("type", "radio");
+                radio.setAttribute("name", "move");
+                radio.setAttribute("value", stateJson["actions"][action_idx]);
+                label.appendChild(radio);
+                label.innerHTML += stateJson["actions"][action_idx]
+
+                buttonDiv.appendChild(label);
+                rowForButtons.appendChild(buttonDiv);
+            }
+
+            var button = document.createElement("button");
+            button.onclick = handle_user_input;
+            button.innerText = "Make move";
+            rowForButtons.append(button);
+        }
+
+        async function wait_for_other() {
+            var winner = null;
+            while (true) {
+                var subtitle = document.getElementById("subTitle");
+                subtitle.removeAttribute("hidden");
+                var stateJson = await getGameState();
+                console.log("wait_for_other_json");
+                console.log(stateJson);
+                if (stateJson["winner"] != "-1") {
+                    subtitle.setAttribute("hidden", "");
+                    draw_board(board_to_array(stateJson["board"]));
+                    if (stateJson["winner"] != playerId) {
+                        document.getElementById("title").innerText = "You lost.";
+                    } else {
+                        document.getElementById("title").innerText = "You won.";
+                    }
+                    return;
+                }
+                if (stateJson["turn"] == playerId) {
+                    subtitle.setAttribute("hidden", "");
+                    draw_board(board_to_array(stateJson["board"]));
+                    setup_player_input();
+                    return;
+                }
+                sleep(1000);
+            }
+        }
+
+    </script>
+    <style>
+        .square-grid-item {
+            border: 1px solid;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 id="title">Choose a player</h1>
+        <h3 id="subTitle" hidden>Waiting for CPU</h1>
+    </div>
+
+    <div class="container" id="playerSelect">
+        <div class="row">
+            <div class="col-2">
+                <input type="radio" name="player" value="1" />
+                Player 1
+            </div>
+            <div class="col-2">
+                <input type="radio" name="player" value="2" />
+                Player 2
+            </div>
+        </div>
+        <button onclick="start_game()">Start game</input>
+    </div>
+
+    <div id="moveInput" class="container">
+        <div class="row" id="moveSelect"></div>
+    </div>
+    <div id="gameboard" class="container"></div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>

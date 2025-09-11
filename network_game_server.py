@@ -33,11 +33,15 @@ class Session:
         self.game = game
         self.player_id = player_id
         self.mu = threading.Lock()
+        self.cond = threading.Condition()
 
     def set_action(self, action: int):
         print(f"setting action to {action}")
-        with self.mu:
-            self.pending_move = action
+        with self.cond:
+            with self.mu:
+                self.pending_move = action
+                print(f"set pending move to {self.pending_move}")
+                self.cond.notify()
 
 session_id_to_session = dict[str, Session]()
 
@@ -61,27 +65,27 @@ class NetworkPlayer(player.Player):
 
     def get_move(self, state: "game.GameState", **kwargs):
         del kwargs
-        wait_count = 0
-        while not self.get_pending_move() and wait_count < 10:
-            wait_count += 1
+        with self.session.cond:
             print(f"waiting for network player in session {self.session.session_id}")
-            time.sleep(2)
-        if self.get_pending_move():
-            move = self.get_pending_move()
-            print(f"got human move {move}")
-            self.reset_pending_move()
-        else:
-            print("Timed out, choosing random action")
-            move = random.choice(state.get_valid_actions())
-        return move
+            self.session.cond.wait(timeout=30)
+            if self.get_pending_move() is not None:
+                move = self.get_pending_move()
+                print(f"got human move {move}")
+                self.reset_pending_move()
+            else:
+                print("Timed out, choosing random action")
+                move = random.choice(state.get_valid_actions())
+            return move
 
 
 @route("/")
 def hello():
+    response.headers['Access-Control-Allow-Origin'] = '*'
     return "hi" 
 
 @route("/getactions")
 def get_actions():
+    response.headers['Access-Control-Allow-Origin'] = '*'
     session_id = request.query.session
     if session_id not in session_id_to_session.keys():
         return json.dumps({"error": "bad session id"})
@@ -97,6 +101,7 @@ def get_actions():
     
 @route("/playaction")
 def playaction():
+    response.headers['Access-Control-Allow-Origin'] = '*'
     session_id = request.query.session
     if session_id not in session_id_to_session.keys():
         return json.dumps({"error": "bad session id"})
@@ -119,15 +124,21 @@ def playaction():
 
 @route("/getstate")
 def getstate():
+    response.headers['Access-Control-Allow-Origin'] = '*'
     session_id = request.query.session
     if session_id not in session_id_to_session.keys():
         return json.dumps({"error": "bad session id"})
-    
+
     session = session_id_to_session[session_id]
-    return str(session.game.get_cur_state().board)
+    winner = session.game.get_winner()
+    return {"board": str(session.game.get_cur_state().board),
+            "turn": session.game.get_player_turn(),
+            "winner": str(winner) if winner else -1}
 
 @route("/start")
 def start():
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    # response.set_header("Access-Control-Allow-Methods:", "GET")
     try:
         player_id = int(request.query.id)
     except Exception as e:
