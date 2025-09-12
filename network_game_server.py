@@ -37,8 +37,8 @@ class Session:
 
     def set_action(self, action: int):
         print(f"setting action to {action}")
-        with self.cond:
-            with self.mu:
+        with self.mu:
+            with self.cond:
                 self.pending_move = action
                 print(f"set pending move to {self.pending_move}")
                 self.cond.notify()

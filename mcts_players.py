@@ -21,7 +21,7 @@ class StateActionProbabilities:
         """Return highest win probability action.
         If no actions have won, pick a random action
         that has been taken before."""
-        max_action = random.sample(self.action_seen.keys(), 1)[0]
+        max_action = random.sample(sorted(self.action_seen.keys()), 1)[0]
         max_action_prob = 0
 
         for action, won in self.action_won.items():
